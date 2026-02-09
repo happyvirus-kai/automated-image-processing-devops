@@ -1,60 +1,99 @@
 import cv2
 import numpy as np
-from tensorflow.keras.models import load_model
-import os
 
-# Load face cascade
+# Simple, beginner-friendly face + mask heuristic using OpenCV only.
+# Heuristic: detect faces with Haar cascade, then check the lower half
+# of the face for skin-color pixels. If the lower half has few skin pixels,
+# we assume a mask is present.
+
 face_cascade = cv2.CascadeClassifier(
     cv2.data.haarcascades + "haarcascade_frontalface_default.xml"
 )
 
-# Load mask model safely
-BASE_DIR = os.path.dirname(os.path.abspath(__file__))
-MODEL_PATH = os.path.join(BASE_DIR, "mask_detector_model.h5")
 
-mask_model = None
-if os.path.exists(MODEL_PATH):
-    mask_model = load_model(MODEL_PATH)
-else:
-    print("Mask model not found — running without mask detection.")
+def _lower_face_has_skin(face_roi):
+    """Return ratio of skin-colored pixels in the lower half of face_roi."""
+    h, w = face_roi.shape[:2]
+    if h == 0 or w == 0:
+        return 0.0
 
-def face_mask(image):
+    lower = face_roi[h // 2 : h, 0:w]
+    if lower.size == 0:
+        return 0.0
+
+    hsv = cv2.cvtColor(lower, cv2.COLOR_BGR2HSV)
+
+    # HSV skin color range (simple approximation)
+    lower_skin = np.array([0, 10, 60], dtype=np.uint8)
+    upper_skin = np.array([20, 150, 255], dtype=np.uint8)
+
+    skin_mask = cv2.inRange(hsv, lower_skin, upper_skin)
+    skin_pixels = cv2.countNonZero(skin_mask)
+    total_pixels = skin_mask.shape[0] * skin_mask.shape[1]
+
+    return float(skin_pixels) / float(total_pixels) if total_pixels > 0 else 0.0
+
+
+def face_mask(image, debug=False):
+    """Detect faces and mark whether a facemask is present (naive heuristic).
+
+    - Returns a copy of `image` with rectangles and text drawn.
+    - Green text: facemask detected. Red text: facemask not detected.
+    """
     gray = cv2.cvtColor(image, cv2.COLOR_BGR2GRAY)
     faces = face_cascade.detectMultiScale(gray, 1.3, 5)
 
     output = image.copy()
 
     for (x, y, w, h) in faces:
-        face_roi = image[y:y+h, x:x+w]
+        face = image[y : y + h, x : x + w]
 
-        if mask_model is not None:
-            # Resize for model
-            face = cv2.resize(face_roi, (224, 224))
-            face = face.astype("float32") / 255.0
-            face = np.expand_dims(face, axis=0)
+        try:
+            skin_ratio = _lower_face_has_skin(face)
+        except Exception:
+            skin_ratio = 1.0
 
-            pred = mask_model.predict(face)[0]
+        # If lower-face skin ratio is low, assume mask. Threshold is heuristic.
+        mask_detected = skin_ratio < 0.45
 
-            if pred[0] > pred[1]:
-                label = "Face Mask Detected"
-                color = (0, 255, 0)
-            else:
-                label = "No Face Mask Detected"
-                color = (0, 0, 255)
-
+        if mask_detected:
+            label = "Facemask Detected"
+            color = (0, 255, 0)  # green
+            text_color = (255, 255, 255)
         else:
-            label = "Model Not Loaded"
-            color = (0, 0, 255)
+            label = "Facemask Not Detected"
+            color = (0, 0, 255)  # red
+            text_color = (255, 255, 255)
 
-        cv2.rectangle(output, (x, y), (x+w, y+h), color, 2)
-        cv2.putText(
-            output,
-            label,
-            (x, y - 10),
-            cv2.FONT_HERSHEY_SIMPLEX,
-            0.7,
-            color,
-            2
-        )
+        cv2.rectangle(output, (x, y), (x + w, y + h), color, 2)
+        # filled background for label for better readability
+        cv2.rectangle(output, (x, y - 28), (x + w, y), color, -1)
+        cv2.putText(output, label, (x + 6, y - 8), cv2.FONT_HERSHEY_SIMPLEX, 0.6, text_color, 2)
+
+        if debug:
+            debug_text = f"skin_ratio={skin_ratio:.2f}"
+            cv2.putText(output, debug_text, (x, y + h + 20), cv2.FONT_HERSHEY_SIMPLEX, 0.5, (255, 255, 0), 1)
 
     return output
+
+
+if __name__ == "__main__":
+    # Simple webcam demo. Press 'q' to quit.
+    cap = cv2.VideoCapture(0)
+    if not cap.isOpened():
+        print("Cannot open camera")
+        exit()
+
+    while True:
+        ret, frame = cap.read()
+        if not ret:
+            break
+
+        out = face_mask(frame)
+        cv2.imshow("Face Mask Detector (naive)", out)
+
+        if cv2.waitKey(1) & 0xFF == ord("q"):
+            break
+
+    cap.release()
+    cv2.destroyAllWindows()
