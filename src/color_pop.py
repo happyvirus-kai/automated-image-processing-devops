@@ -1,3 +1,5 @@
+import cv2
+
 def color_pop(image):
     gray = cv2.cvtColor(image, cv2.COLOR_BGR2GRAY)
     gray = cv2.cvtColor(gray, cv2.COLOR_GRAY2BGR)
