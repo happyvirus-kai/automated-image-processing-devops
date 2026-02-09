@@ -1,7 +1,7 @@
 import cv2
 import numpy as np
 
-def neon_effect(image):
+def neon_glow(image):
     """Apply neon glow effect around the person's outline."""
     # Resize for consistency
     image = cv2.resize(image, (600, 800))
