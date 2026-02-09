@@ -44,5 +44,5 @@ def process_images():
                 face_mask_detection(image)
             )
 
-if _name_ == "_main_":
+if __name__ == "_main_":
     process_images()
