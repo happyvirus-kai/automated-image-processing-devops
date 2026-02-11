@@ -1,4 +1,5 @@
 Automated Image Processing using DevOps CI Pipeline
+
 📌 Project Overview
 
 This project implements an automated image processing pipeline using Python and OpenCV, integrated with DevOps practices such as version control, automated testing, and Continuous Integration (CI).
@@ -31,17 +32,29 @@ Visual Studio Code
 
 📁 Project Structure
 .
+
 ├── src/
+
 │   ├── main.py
+
 │   ├── color_pop.py
+
 │   ├── neon.py
+
 │   ├── rain_snow.py
+
 │   └── face_mask.py
+
 ├── tests/
+
 │   ├── test_pipeline.py
+
 ├── input/
+
 ├── output/
+
 ├── requirements.txt
+
 └── README.md
 
 ⚙️ How the System Works
@@ -59,6 +72,7 @@ Automated tests verify correct execution and output validity
 GitHub Actions CI runs tests on every push to the repository
 
 🧠 Image Processing Techniques:
+
 🎨 Color Pop Effect
 
 Uses grayscale conversion and histogram equalization to enhance contrast, then applies multiple color tints to generate a Warhol-style pop art effect arranged in a 2×2 grid.
@@ -157,6 +171,9 @@ This project demonstrates how image processing systems can be effectively automa
 👩‍💻 Author
 
 Kyla C. Alicaway
+
 Christian G. Licuanan
+
 Ma. Yvette L. Magana
+
 ELECTIVE 4 Midterm Exam
